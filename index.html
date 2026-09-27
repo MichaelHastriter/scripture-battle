@@ -86,9 +86,9 @@ form { display: grid; gap: 7px; }
 .swatch.recruit { background:#5c8ee2; box-shadow:0 0 0 2px #ad8651; }
 .swatch.bad { background:#c53d3d; box-shadow:0 0 0 2px #c6c9ce; }
 .swatch.brute { background:#8f2020; box-shadow:0 0 0 3px #d5d9df; }
-.game-over { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(8,8,10,.74); backdrop-filter: blur(4px); z-index: 5; }
+.game-over { position: absolute; inset: 0; display: grid; place-items: start center; align-content: start; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 10px 0; background: rgba(8,8,10,.74); backdrop-filter: blur(4px); z-index: 5; }
 .game-over.hidden { display: none; }
-.game-over-card { width: min(390px, 88%); text-align: center; background: #171a1f; border: 1px solid #454d5a; border-radius: 16px; padding: 24px; display: grid; gap: 12px; }
+.game-over-card { width: min(390px, 92%); max-height: calc(100% - 8px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; text-align: center; background: #171a1f; border: 1px solid #454d5a; border-radius: 16px; padding: 18px; display: grid; gap: 10px; }
 .game-over-title { font-size: 2rem; font-weight: 900; letter-spacing: .08em; }
 .final-stats { color: var(--muted); font-size: .88rem; }
 .last-missed { text-align: left; background: #101318; border: 1px solid #343b47; border-radius: 11px; padding: 12px; max-height: 230px; overflow: auto; }
@@ -133,6 +133,12 @@ form { display: grid; gap: 7px; }
   .field-row input, .field-row select { padding: 7px 6px; font-size: .85rem; }
   .submit-answer { padding: 7px 10px; }
   #game { height: 60vh; }
+  .game-over { padding: 6px 0; }
+  .game-over-card { width: 95%; max-height: calc(100% - 4px); padding: 12px; gap: 8px; }
+  .game-over-title { font-size: 1.55rem; }
+  .last-missed { max-height: 155px; padding: 9px; }
+  .leaderboard-panel { padding: 9px; gap: 6px; }
+  .leaderboard-list { max-height: 120px; }
   .toggle { width: 100%; margin-left: 0; }
 }
 
@@ -216,6 +222,19 @@ form { display: grid; gap: 7px; }
               <div class="game-over-title">GAME OVER</div>
               <div>Three enemies broke through the top line.</div>
               <div id="finalStats" class="final-stats"></div>
+              <section id="leaderboardPanel" class="leaderboard-panel" aria-label="Top 10 high scores">
+                <div class="leaderboard-title">🏆 Family Top 10</div>
+                <div id="leaderboardStatus" class="leaderboard-status">Loading scores…</div>
+                <form id="highScoreForm" class="high-score-form hidden">
+                  <label for="highScoreName">New high score — enter your name</label>
+                  <div class="high-score-entry">
+                    <input id="highScoreName" type="text" maxlength="24" autocomplete="name" placeholder="Name" required />
+                    <button id="submitHighScore" type="submit">Save</button>
+                  </div>
+                  <div id="highScoreMessage" class="high-score-message" aria-live="polite"></div>
+                </form>
+                <div id="leaderboardList" class="leaderboard-list"></div>
+              </section>
               <section id="lastMissed" class="last-missed hidden" aria-label="Last missed scripture">
                 <div class="last-missed-label">Last scripture missed</div>
                 <blockquote id="lastMissedText" class="last-missed-text"></blockquote>
@@ -225,19 +244,6 @@ form { display: grid; gap: 7px; }
               <section id="currentReveal" class="last-missed hidden" aria-label="Current scripture answer">
                 <div class="last-missed-label current-reveal-label">Current scripture — answer revealed</div>
                 <div id="currentRevealReference" class="last-missed-reference"></div>
-              </section>
-              <section id="leaderboardPanel" class="leaderboard-panel" aria-label="Top 10 high scores">
-                <div class="leaderboard-title">🏆 Family Top 10</div>
-                <div id="leaderboardStatus" class="leaderboard-status">Loading scores…</div>
-                <div id="leaderboardList" class="leaderboard-list"></div>
-                <form id="highScoreForm" class="high-score-form hidden">
-                  <label for="highScoreName">New high score — enter your name</label>
-                  <div class="high-score-entry">
-                    <input id="highScoreName" type="text" maxlength="24" autocomplete="name" placeholder="Name" required />
-                    <button id="submitHighScore" type="submit">Save</button>
-                  </div>
-                  <div id="highScoreMessage" class="high-score-message" aria-live="polite"></div>
-                </form>
               </section>
               <button id="restartOverlay">Restart Game</button>
             </div>
@@ -609,7 +615,9 @@ window.SCRIPTURE_DATA={"labels":{"ot":"Old Testament","nt":"New Testament","bom"
       if(!scoreSubmitted && qualifiesForLeaderboard(currentScore(),Math.floor(survivalSeconds),rows)){
         ui.highScoreForm.classList.remove('hidden');
         ui.highScoreMessage.textContent=`Score ${currentScore().toLocaleString()} qualifies for the Top 10.`;
-        setTimeout(()=>ui.highScoreName.focus({preventScroll:true}),0);
+        const card=ui.gameOver.querySelector('.game-over-card');
+        if(card)card.scrollTop=0;
+        ui.gameOver.scrollTop=0;
       }else if(!scoreSubmitted){
         ui.highScoreMessage.textContent='';
       }
