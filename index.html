@@ -222,8 +222,8 @@ form { display: grid; gap: 7px; }
               <div class="game-over-title">GAME OVER</div>
               <div>Three enemies broke through the top line.</div>
               <div id="finalStats" class="final-stats"></div>
-              <section id="leaderboardPanel" class="leaderboard-panel" aria-label="Top 10 high scores">
-                <div class="leaderboard-title">🏆 Family Top 10</div>
+              <section id="leaderboardPanel" class="leaderboard-panel" aria-label="Top Ten High Scores">
+                <div class="leaderboard-title">🏆 Top Ten High Scores</div>
                 <div id="leaderboardStatus" class="leaderboard-status">Loading scores…</div>
                 <form id="highScoreForm" class="high-score-form hidden">
                   <label for="highScoreName">New high score — enter your name</label>
@@ -614,7 +614,7 @@ window.SCRIPTURE_DATA={"labels":{"ot":"Old Testament","nt":"New Testament","bom"
       renderLeaderboard(rows);
       if(!scoreSubmitted && qualifiesForLeaderboard(currentScore(),Math.floor(survivalSeconds),rows)){
         ui.highScoreForm.classList.remove('hidden');
-        ui.highScoreMessage.textContent=`Score ${currentScore().toLocaleString()} qualifies for the Top 10.`;
+        ui.highScoreMessage.textContent=`Score ${currentScore().toLocaleString()} qualifies for the Top Ten High Scores.`;
         const card=ui.gameOver.querySelector('.game-over-card');
         if(card)card.scrollTop=0;
         ui.gameOver.scrollTop=0;
