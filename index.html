@@ -34,6 +34,11 @@ button { color: inherit; }
 .play-grid { display: grid; grid-template-columns: minmax(330px, .72fr) minmax(620px, 1.35fr); gap: 10px; align-items: start; }
 .question-panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; position: sticky; top: 8px; display: grid; gap: 8px; }
 .question-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.game-mode-row { display:grid; grid-template-columns:auto minmax(0,1fr); gap:8px; align-items:center; padding:8px 10px; border:1px solid #3d4654; border-radius:9px; background:#101319; }
+.game-mode-row label { color:#c7ced8; font-size:.68rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
+.game-mode-row select { width:100%; border:1px solid #414a58; border-radius:8px; background:#0f1217; color:var(--text); padding:7px 8px; font-weight:800; }
+.radio-grid.bible-only { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.lds-only.hidden-by-mode { display:none; }
 .eyebrow { color: #cfd7e4; font-size: .74rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .question-number { color: var(--muted); font-size: .8rem; }
 .verse-text { margin: 0; padding: 15px; border-radius: 11px; border: 1px solid #3d4654; background: #101319; font-family: Georgia, "Times New Roman", serif; font-size: clamp(1.08rem, 2vw, 1.38rem); line-height: 1.48; max-height: 28vh; overflow: auto; }
@@ -76,6 +81,8 @@ form { display: grid; gap: 7px; }
 .controls { display: flex; flex-wrap: wrap; gap: 7px; padding: 8px 0; align-items: center; }
 .controls button, .game-over button { border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px; background: var(--panel-2); cursor: pointer; font-weight: 750; }
 .controls button:hover, .game-over button:hover { filter: brightness(1.12); }
+.mode-toggle { display:flex; align-items:center; gap:7px; color:#e7edf7; font-size:.82rem; padding:7px 10px; border:1px solid #465164; border-radius:9px; background:#171b22; cursor:pointer; }
+.mode-toggle input { accent-color:#6da8ff; }
 .toggle { display: flex; align-items: center; gap: 7px; color: var(--muted); margin-left: auto; font-size: .82rem; }
 .unit-legend { display: flex; flex-wrap: wrap; gap: 7px 13px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; color: #bcc5d1; font-size: .73rem; }
 .unit-legend span { white-space: nowrap; }
@@ -157,7 +164,7 @@ form { display: grid; gap: 7px; }
         <div class="status-card"><span>Red</span><strong id="redCount">0</strong></div>
         <div class="status-card"><span>Survived</span><strong id="survivalTime">00:00:00</strong></div>
         <div class="status-card"><span>Score</span><strong id="score">0</strong></div>
-        <div class="status-card"><span>Enemy spawn</span><strong id="spawnCountdown">4.0s</strong></div>
+        <div class="status-card"><span>Enemy spawn</span><strong id="spawnCountdown">6.0s</strong></div>
       </div>
     </header>
 
@@ -171,13 +178,13 @@ form { display: grid; gap: 7px; }
 
         <form id="answerForm" autocomplete="off">
           <fieldset class="work-fieldset">
-            <legend>Standard Work</legend>
-            <div class="radio-grid">
+            <legend id="workLegend">Testament</legend>
+            <div id="workRadioGrid" class="radio-grid">
               <label title="Old Testament"><input type="radio" name="work" value="ot" aria-label="Old Testament" required><span>OT</span></label>
               <label title="New Testament"><input type="radio" name="work" value="nt" aria-label="New Testament"><span>NT</span></label>
-              <label title="Book of Mormon"><input type="radio" name="work" value="bom" aria-label="Book of Mormon"><span>BoM</span></label>
-              <label title="Doctrine and Covenants"><input type="radio" name="work" value="dc" aria-label="Doctrine and Covenants"><span>D&amp;C</span></label>
-              <label title="Pearl of Great Price"><input type="radio" name="work" value="pgp" aria-label="Pearl of Great Price"><span>PoGP</span></label>
+              <label class="lds-only" title="Book of Mormon"><input type="radio" name="work" value="bom" aria-label="Book of Mormon"><span>BoM</span></label>
+              <label class="lds-only" title="Doctrine and Covenants"><input type="radio" name="work" value="dc" aria-label="Doctrine and Covenants"><span>D&amp;C</span></label>
+              <label class="lds-only" title="Pearl of Great Price"><input type="radio" name="work" value="pgp" aria-label="Pearl of Great Price"><span>PoGP</span></label>
             </div>
           </fieldset>
 
@@ -253,6 +260,7 @@ form { display: grid; gap: 7px; }
         <div class="controls">
           <button id="pause" type="button">Pause</button>
           <button id="reset" type="button">Reset</button>
+          <label class="mode-toggle"><input type="checkbox" id="gameModeSelect" checked /> <strong>BIBLE ONLY</strong></label>
           <label class="toggle"><input type="checkbox" id="debug" /> Debug ranges</label>
         </div>
 
@@ -290,6 +298,9 @@ window.SCRIPTURE_DATA={"labels":{"ot":"Old Testament","nt":"New Testament","bom"
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const ui = {
+    gameModeSelect: document.getElementById('gameModeSelect'),
+    workLegend: document.getElementById('workLegend'),
+    workRadioGrid: document.getElementById('workRadioGrid'),
     breakthroughs: document.getElementById('breakthroughs'),
     blueCount: document.getElementById('blueCount'),
     redCount: document.getElementById('redCount'),
@@ -345,7 +356,7 @@ window.SCRIPTURE_DATA={"labels":{"ot":"Old Testament","nt":"New Testament","bom"
     veryCloseOmniRange: 9,
     forwardHalfAngleRad: 100 * Math.PI / 180,
     maxMeleeAttackers: 8,
-    enemySpawnEvery: 4,
+    enemySpawnEvery: 6,
     maxBreakthroughs: 3,
     deathDuration: 0.5,
     targetDropExtraRange: 9,
@@ -428,6 +439,7 @@ window.SCRIPTURE_DATA={"labels":{"ot":"Old Testament","nt":"New Testament","bom"
   let accumulator = 0;
   let lastTime = performance.now();
   let currentQuestion = null;
+  let gameMode = 'bible';
   let questionNumber = 0;
   let questionsAnswered = 0;
   let exactAnswers = 0;
@@ -500,6 +512,8 @@ window.SCRIPTURE_DATA={"labels":{"ot":"Old Testament","nt":"New Testament","bom"
       ['soldier', 70], ['recruit', 80], ['veteran', 90],
     ];
     for (const [typeKey, x] of formation) spawnUnit(typeKey, x);
+    // Enemy army starts with 3 Brutes.
+    for (const x of [25, 50, 75]) spawnUnit('brute', x);
   }
 
   function resetGame() {
@@ -542,7 +556,7 @@ window.SCRIPTURE_DATA={"labels":{"ot":"Old Testament","nt":"New Testament","bom"
     ui.answerResultCorrect.textContent = '';
     ui.answerResultCorrect.classList.add('hidden');
     spawnStartingArmy();
-    setFeedback('neutral','Your army starts with 3 Veterans, 3 Soldiers, and 3 Recruits.','Champions are earned only through exact answers.');
+    setFeedback('neutral','Your army starts with 3 Veterans, 3 Soldiers, and 3 Recruits. The enemy starts with 3 Brutes.','Champions are earned only through exact answers.');
     nextQuestion();
     updateHud();
   }
@@ -813,6 +827,18 @@ window.SCRIPTURE_DATA={"labels":{"ot":"Old Testament","nt":"New Testament","bom"
   }
 
   // ----- Scripture question engine -----
+  function allowedWorks(){ return gameMode==='bible' ? ['ot','nt'] : ['ot','nt','bom','dc','pgp']; }
+
+  function applyGameModeUI(){
+    const bible=gameMode==='bible';
+    ui.workLegend.textContent=bible?'Testament':'Standard Work';
+    ui.workRadioGrid.classList.toggle('bible-only',bible);
+    document.querySelectorAll('.lds-only').forEach(el=>el.classList.toggle('hidden-by-mode',bible));
+    const checked=document.querySelector('input[name="work"]:checked');
+    if(checked && !allowedWorks().includes(checked.value)) checked.checked=false;
+    updateAnswerShape();
+  }
+
   function selectedWork(){const el=document.querySelector('input[name="work"]:checked');return el?el.value:null;}
 
   function populateBookOptions(work){
@@ -820,7 +846,7 @@ window.SCRIPTURE_DATA={"labels":{"ot":"Old Testament","nt":"New Testament","bom"
     const placeholder=document.createElement('option');
     placeholder.value='';
     if(!work){
-      placeholder.textContent='Select a Standard Work first';
+      placeholder.textContent=gameMode==='bible'?'Select a Testament first':'Select a Standard Work first';
       ui.bookSelect.appendChild(placeholder);
       ui.bookSelect.disabled=true;
       return;
@@ -875,18 +901,21 @@ window.SCRIPTURE_DATA={"labels":{"ot":"Old Testament","nt":"New Testament","bom"
   }
 
   function pickFromPassagePool(pool){
+    const allowed=new Set(allowedWorks());
+    const eligible=pool.map(p=>p.filter(q=>q && allowed.has(q.work))).filter(p=>p.length);
+    if(!eligible.length)return null;
     for(let tries=0;tries<160;tries++){
-      const passage=pool[Math.floor(Math.random()*pool.length)];
+      const passage=eligible[Math.floor(Math.random()*eligible.length)];
       const q=passage[Math.floor(Math.random()*passage.length)];
       if(q && q.reference!==previousQuestionRef && !seenQuestionRefs.has(q.reference))return {...q};
     }
-    for(const passage of pool)for(const q of passage)if(q&&q.reference!==previousQuestionRef)return {...q};
+    for(const passage of eligible)for(const q of passage)if(q&&q.reference!==previousQuestionRef)return {...q};
     return null;
   }
 
   function pickRandomAnywhere(){
     // Preserve the game's equal weighting by Standard Work, then choose a random verse inside it.
-    const keys=['ot','nt','bom','dc','pgp'];
+    const keys=allowedWorks();
     for(let tries=0;tries<120;tries++){
       const work=keys[Math.floor(Math.random()*keys.length)];
       const verses=DATA.works[work].verses;
@@ -995,6 +1024,8 @@ window.SCRIPTURE_DATA={"labels":{"ot":"Old Testament","nt":"New Testament","bom"
     ui.feedback.textContent=`${title}. ${detail}`;
   }
 
+  ui.gameModeSelect.addEventListener('change',()=>{ gameMode=ui.gameModeSelect.checked?'bible':'standard'; applyGameModeUI(); resetGame(); });
+
   ui.answerForm.addEventListener('submit',e=>{
     e.preventDefault();
     if(gameOver||!currentQuestion)return;
@@ -1055,7 +1086,7 @@ window.SCRIPTURE_DATA={"labels":{"ot":"Old Testament","nt":"New Testament","bom"
   ui.reset.addEventListener('click',resetGame);ui.restartOverlay.addEventListener('click',resetGame);
   window.addEventListener('resize',resizeCanvas);new ResizeObserver(resizeCanvas).observe(canvas);
 
-  updateAnswerShape();resizeCanvas();resetGame();requestAnimationFrame(loop);
+  gameMode=ui.gameModeSelect.checked?'bible':'standard';applyGameModeUI();resizeCanvas();resetGame();requestAnimationFrame(loop);
 })();
 
 </script>
