@@ -807,11 +807,30 @@ window.SCRIPTURE_DATA={"labels":{"ot":"Old Testament","nt":"New Testament","bom"
     for(const u of units){if(!u.dead&&u.hp<=0){u.hp=0;u.dead=true;u.state='dead';u.deathTimer=RULES.deathDuration;}}
   }
 
+  function spawnBreakthroughReinforcements(){
+    // A right-flank relief squad: three standard Soldiers and one elite Veteran.
+    // They enter near the right edge, spaced along the lower half of the field.
+    const formation = [
+      ['soldier', WORLD_H * 0.58],
+      ['veteran', WORLD_H * 0.66],
+      ['soldier', WORLD_H * 0.74],
+      ['soldier', WORLD_H * 0.82],
+    ];
+    for(const [typeKey, y] of formation){
+      const u = spawnUnit(typeKey, WORLD_W - UNIT_TYPES[typeKey].radius - 1);
+      if(u){
+        u.y = y;
+        u.headingX = -1;
+        u.headingY = 0;
+      }
+    }
+  }
+
   function handleBoundaries(){
     const survivors=[];
     for(const u of units){
       if(u.dead){if(u.deathTimer>0)survivors.push(u);continue;}
-      if(u.team==='red'&&u.y>=WORLD_H+u.radius*.25){breakthroughs++;if(breakthroughs>=RULES.maxBreakthroughs)endGame();continue;}
+      if(u.team==='red'&&u.y>=WORLD_H+u.radius*.25){breakthroughs++;if(breakthroughs>=RULES.maxBreakthroughs)endGame();else spawnBreakthroughReinforcements();continue;}
       if(u.team==='blue'&&u.y<=-u.radius*.25)continue;
       survivors.push(u);
     }
