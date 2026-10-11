@@ -839,7 +839,10 @@ window.SCRIPTURE_DATA={"labels":{"ot":"Old Testament","nt":"New Testament","bom"
 
   function fixedUpdate(dt){
     if(paused||gameOver)return;
+    const previousMinute = Math.floor(survivalSeconds / 60);
     survivalSeconds+=dt;
+    const currentMinute = Math.floor(survivalSeconds / 60);
+    for(let minute=previousMinute+1;minute<=currentMinute;minute++) spawnBreakthroughReinforcements();
     enemySpawnTimer-=dt;
     while(enemySpawnTimer<=0){spawnUnit('bad');enemySpawnTimer+=RULES.enemySpawnEvery;}
     const pending=[];for(const u of [...units].sort((a,b)=>a.id-b.id))updateUnit(u,dt,pending);resolveHits(pending);handleBoundaries();updateHud();
@@ -1034,6 +1037,7 @@ window.SCRIPTURE_DATA={"labels":{"ot":"Old Testament","nt":"New Testament","bom"
     if(effect.unit)spawnUnit(effect.unit);
     answerBonusScore+=effect.points;
     questionsAnswered++;tierCounts[tier]++;if(tier===1)exactAnswers++;
+    if(questionsAnswered % 10 === 0) spawnBreakthroughReinforcements();
     showAnswerResult(tier,entered,correct);
     setFeedback(effect.tone,`Tier ${tier} — ${effect.name}`,`${effect.description} Correct: ${correct}`);
   }
