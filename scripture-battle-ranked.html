@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#152b45">
+<title>Scripture Battle — Ranked Top 100</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color-scheme:dark;--text:#eef3fc;--muted:#afc2d6;--gold:#f6d083;--edge:#415a72}*{box-sizing:border-box}body{margin:0;background:#07121e;color:var(--text)}header{display:flex;align-items:center;flex-wrap:wrap;justify-content:space-between;gap:12px;padding:12px 18px;background:#152b45;border-bottom:1px solid #3d5772}header strong{font-family:Georgia,serif;font-size:21px}header small{display:block;color:var(--muted)}button,a.action{cursor:pointer;border:1px solid #57708d;background:#203d58;color:var(--text);padding:10px 13px;border-radius:9px;font:600 14px system-ui;text-decoration:none}button:hover,a.action:hover{background:#355472}.actions{display:flex;flex-wrap:wrap;gap:7px}.gold{background:#dcb567;color:#201b14;border-color:#dcb567}.gold:hover{background:#f1d18e}.info{padding:9px 18px;background:#172639;color:#c5d3e1;font-size:12px}#frame{display:block;width:100%;height:calc(100dvh - 119px);min-height:620px;border:0;background:#0b121d}dialog{max-width:min(710px,calc(100vw - 18px));width:100%;max-height:90vh;overflow:auto;background:#13263d;color:var(--text);border:1px solid #57708d;border-radius:18px;padding:0;box-shadow:0 25px 80px #000a}dialog::backdrop{background:#000c}.modalHead{position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;background:#1b334e;border-bottom:1px solid #456078;padding:17px 20px}.modalHead h2{font-family:Georgia,serif;font-size:24px;margin:0}.modalBody{padding:20px}.label{font-size:12px;color:#9db9ce;letter-spacing:.08em;text-transform:uppercase;font-weight:750}.stat{font-family:Georgia,serif;font-size:43px;margin:4px 0;color:var(--gold)}.rank{font-size:22px;font-weight:780;margin-bottom:18px}.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.row input{background:#0b1b2c;color:#fff;border:1px solid #60768f;border-radius:9px;padding:11px;min-width:0;flex:1;font:16px system-ui}.note{color:var(--muted);font-size:13px;line-height:1.6}.error{color:#ffa3a3}.success{color:#8ce9b6}.tabs{display:flex;gap:7px;margin:15px 0;flex-wrap:wrap}.tabs button.active{background:var(--gold);color:#172232;border-color:var(--gold)}.entries{max-height:53vh;overflow-y:auto;border:1px solid #3c5973;border-radius:10px;background:#0c1c2e}.entry{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid #294259;font-size:14px}.entry:last-child{border-bottom:0}.entry:nth-child(even){background:#ffffff08}.entry b{font-variant-numeric:tabular-nums}.subline{font-size:11px;color:#a8b9c9}.pill{color:#b3ddfc;font-size:11px}#notice{color:#a9bfd6}@media(max-width:650px){header{padding:10px}header strong{font-size:17px}.actions button,.actions a{padding:8px 10px;font-size:12px}#frame{height:calc(100dvh - 137px)}.modalBody{padding:13px}.entry{font-size:12px;grid-template-columns:30px minmax(0,1fr) auto}} </style></head>
+<body>
+<header><div><strong>📖 Scripture Battle — Ranked Play</strong><small>Existing game · Worldwide Top 100</small></div><div class="actions"><button id="scoresBtn" class="gold">🏆 Top 100</button><button id="reloadBtn">↻ New game</button><a class="action" href="https://michaelhastriter.github.io/hastriter-games/">Master Arcade</a></div></header>
+<div class="info" id="notice" role="status">Play normally below. At GAME OVER, your final score is captured automatically and checked against the Top 100.</div>
+<iframe id="frame" title="Scripture Battle game" src="./index.html" allow="fullscreen" loading="eager"></iframe>
+<dialog id="qualifyDlg" aria-labelledby="qualifyTitle"><div class="modalHead"><h2 id="qualifyTitle">🏆 You made the Top 100!</h2><button id="dismissQualify" aria-label="Close">✕</button></div><div class="modalBody"><div class="label">Final game score</div><div class="stat" id="qualifyScore">0</div><div class="rank" id="qualifyRank"></div><div class="note" id="qualifyMode"></div><p class="note">Enter your name to claim the ranking. Your score is recorded only after you select Save.</p><form id="claimForm"><label for="playerName">Player name (1–24 characters)</label><div class="row" style="margin-top:8px"><input id="playerName" maxlength="24" required autocomplete="nickname" placeholder="Your name"><button class="gold" id="saveBtn" type="submit">Save score</button></div></form><p id="claimStatus" class="note" role="status"></p><button id="openFromClaim">View worldwide Top 100</button></div></dialog>
+<dialog id="boardDlg" aria-labelledby="boardTitle"><div class="modalHead"><h2 id="boardTitle">🏆 Scripture Battle — Top 100</h2><button id="dismissBoard" aria-label="Close">✕</button></div><div class="modalBody"><div class="tabs"><button data-mode="standard">Standard</button><button data-mode="bible_only">Bible Only</button><button data-mode="all">All Players</button></div><p class="note" id="boardStatus" role="status">Loading…</p><div id="entries" class="entries"></div><p class="note">Ranked by final score, then survival time. Standard and Bible Only scores remain separate. All Players shows each display name's highest result across modes. Older results are preserved.</p><button id="refreshBoard">↻ Refresh scores</button></div></dialog>
+<script>
+(()=>{'use strict';
+const API='https://qniaqvuhdgjlqnkpnmdo.supabase.co';const KEY='sb_publishable_aONEAggt3t3mX_M9DJNeNw_fMWduv1e';const TABLE='scripture_battle_scores';
+const $=id=>document.getElementById(id);const frame=$('frame');let gameDoc=null,observed=null,lastEndKey='',pending=null,currentMode='standard',saving=false;
+function esc(x){return String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function headers(extra={}){return {'apikey':KEY,'Authorization':'Bearer '+KEY,...extra}}
+const scoreOf=x=>Number(String(x||'0').replace(/,/g,''));
+function sortScores(a,b){return Number(b.score)-Number(a.score)||Number(b.survival_seconds)-Number(a.survival_seconds)||Date.parse(a.created_at||'')-Date.parse(b.created_at||'')}
+function displayBest(rows){const byName=new Map();for(const r of rows.sort(sortScores)){const k=String(r.player_name||'').trim().toLocaleLowerCase();if(k&&!byName.has(k))byName.set(k,r)}return [...byName.values()].sort(sortScores).slice(0,100)}
+async function fetchScores(mode='all'){
+  // Page through results so multiple plays by one name don't consume leaderboard slots.
+  const output=[];let offset=0;
+  for(let page=0;page<10;page++){
+   const qs=new URLSearchParams({select:'player_name,score,survival_seconds,questions_answered,exact_answers,created_at,game_mode',order:'score.desc,survival_seconds.desc,created_at.asc',limit:'1000',offset:String(offset)});
+   if(mode!=='all')qs.set('game_mode','eq.'+mode);
+   const response=await fetch(API+'/rest/v1/'+TABLE+'?'+qs,{headers:headers()});if(!response.ok)throw Error('Leaderboard request failed (HTTP '+response.status+')');
+   const pageRows=await response.json();output.push(...pageRows);if(pageRows.length<1000||displayBest(output).length>=100)break;offset+=1000;
+  }
+  return displayBest(output);
+}
+function rankOf(result,rows){return 1+rows.filter(r=>sortScores(r,result)<0).length}
+function openDialog(dialog){if(!dialog.open)dialog.showModal()}
+function closeDialog(dialog){if(dialog.open)dialog.close()}
+function showError(message){$('notice').textContent=message;}
+async function showBoard(mode='standard'){
+ currentMode=mode;openDialog($('boardDlg'));document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+ $('boardStatus').textContent='Loading '+(mode==='all'?'All Players':mode==='bible_only'?'Bible Only':'Standard')+' rankings…';$('entries').replaceChildren();
+ try{const rows=await fetchScores(mode);if(currentMode!==mode)return;
+ $('boardStatus').textContent=rows.length?rows.length+' ranked players · highest score per display name':'No scores yet — the first completed game can take #1.';
+ $('entries').innerHTML=rows.map((r,i)=>`<div class="entry"><b>${i+1}.</b><div><strong>${esc(r.player_name)}</strong><div class="subline">${r.game_mode==='bible_only'?'Bible Only':'Standard'} · ${Math.floor(Number(r.survival_seconds||0)/60)}m ${Number(r.survival_seconds||0)%60}s · ${Number(r.exact_answers||0)} exact</div></div><b>${Number(r.score).toLocaleString()}</b></div>`).join('')||'<p class="note" style="padding:20px">No scores for this category yet.</p>';
+ }catch(e){$('boardStatus').textContent='Could not load scores: '+e.message}
+}
+async function captureResult(doc){
+ const over=doc.getElementById('gameOver');if(!over||over.classList.contains('hidden'))return;
+ const detail=doc.getElementById('finalStats')?.textContent||'';
+ const score=scoreOf(doc.getElementById('score')?.textContent); const match=detail.match(/Score\s+([\d,]+)/i);
+ const finalScore=match?scoreOf(match[1]):score;
+ const surviveText=doc.getElementById('survivalTime')?.textContent||'';
+ const timerMatch=surviveText.match(/^(\d+):(\d+):(\d+)$/);
+ const survive=timerMatch?Number(timerMatch[1])*3600+Number(timerMatch[2])*60+Number(timerMatch[3]):0;
+ const mode=doc.getElementById('gameModeSelect')?.checked?'bible_only':'standard';
+ const key=[mode,finalScore,survive,detail].join('|');if(lastEndKey===key)return;lastEndKey=key;
+ if(!Number.isSafeInteger(finalScore)||finalScore<=0){showError('Game completed; your final score was 0, so it does not qualify for the Top 100.');return}
+ pending={score:finalScore,survival_seconds:survive,game_mode:mode,questions_answered:Number((detail.match(/·\s*(\d+) answered/)||[])[1]||0),exact_answers:Number((detail.match(/·\s*(\d+) exact/)||[])[1]||0)};
+ $('notice').textContent='Game complete: '+finalScore.toLocaleString()+' points. Checking Top 100…';
+ try{const rows=await fetchScores(mode);if(!pending||pending.score!==finalScore)return;
+ const rank=rankOf({...pending,created_at:new Date().toISOString()},rows);
+ if(rank>100){$('notice').textContent='Final score '+finalScore.toLocaleString()+' — outside the Top 100 for '+(mode==='bible_only'?'Bible Only':'Standard')+' (rank #'+rank+').';return}
+ $('qualifyScore').textContent=finalScore.toLocaleString();$('qualifyRank').textContent='Your rank: #'+rank;
+ $('qualifyMode').textContent=(mode==='bible_only'?'Bible Only':'Standard')+' · '+survive+' seconds survived · Rank will be rechecked when saved.';
+ $('claimForm').hidden=false;$('playerName').value='';$('claimStatus').textContent='';$('saveBtn').disabled=false;openDialog($('qualifyDlg'));
+ }catch(e){showError('Game complete: '+finalScore.toLocaleString()+'. Could not check Top 100: '+e.message+'. You can still view the results later.')}
+}
+function attachToGame(){
+ try{gameDoc=frame.contentDocument;if(!gameDoc||!gameDoc.getElementById('gameOver'))throw Error('The original game was not accessible.');
+ // The original Top 10 UI remains in the legacy game; hide it in ranked play to avoid conflicting entry forms.
+ const style=gameDoc.createElement('style');style.textContent='#leaderboardPanel{display:none!important}';gameDoc.head.append(style);
+ const over=gameDoc.getElementById('gameOver');if(observed)observed.disconnect();observed=new MutationObserver(()=>{if(over.classList.contains('hidden')){lastEndKey='';pending=null}else captureResult(gameDoc)});
+ observed.observe(over,{attributes:true,attributeFilter:['class']});captureResult(gameDoc);
+ $('notice').textContent='Ranked Play active. Play Scripture Battle below; final scores are checked automatically at GAME OVER.';
+ }catch(e){showError('Ranked capture is unavailable: '+e.message+' Open the game and the scoreboard separately if this browser restricts embedded games.')}
+}
+frame.addEventListener('load',attachToGame);
+$('claimForm').addEventListener('submit',async e=>{
+ e.preventDefault();if(!pending||saving)return;const name=$('playerName').value.trim().replace(/\s+/g,' ');
+ if(!name||name.length>24){$('claimStatus').textContent='Enter a name of 1–24 characters.';return}
+ saving=true;$('saveBtn').disabled=true;$('claimStatus').textContent='Rechecking your rank and saving…';
+ try{const previous=await fetchScores(pending.game_mode);const existingName=previous.find(x=>String(x.player_name||'').trim().toLocaleLowerCase()===name.toLocaleLowerCase());if(existingName&&Number(existingName.score)>=pending.score)throw Error('That player name already has an equal or higher score. Enter a different name, or improve your record.');const rank=rankOf({...pending,created_at:new Date().toISOString()},previous);
+ if(rank>100)throw Error('The Top 100 cutoff changed. Your current rank is #'+rank+'.');
+ const result=await fetch(API+'/rest/v1/'+TABLE,{method:'POST',headers:headers({'Content-Type':'application/json','Prefer':'return=minimal'}),body:JSON.stringify({...pending,player_name:name})});
+ if(!result.ok)throw Error('Server rejected score (HTTP '+result.status+').');
+ const updated=await fetchScores(pending.game_mode);const savedRank=updated.findIndex(x=>String(x.player_name).toLocaleLowerCase()===name.toLocaleLowerCase()&&Number(x.score)===pending.score)+1;
+ $('claimStatus').textContent='Score saved! '+(savedRank?'Your '+(pending.game_mode==='bible_only'?'Bible Only':'Standard')+' rank is #'+savedRank+'.':'Your result has been recorded.');$('claimStatus').className='success';$('notice').textContent='Score saved: '+pending.score.toLocaleString()+' — '+name;
+ $('claimForm').hidden=true;
+ }catch(err){$('claimStatus').textContent=err.message+' You can retry.';$('claimStatus').className='error';$('saveBtn').disabled=false}
+ finally{saving=false}
+});
+$('dismissQualify').onclick=()=>closeDialog($('qualifyDlg'));$('dismissBoard').onclick=()=>closeDialog($('boardDlg'));$('scoresBtn').onclick=()=>showBoard('standard');$('refreshBoard').onclick=()=>showBoard(currentMode);
+$('openFromClaim').onclick=()=>{closeDialog($('qualifyDlg'));showBoard(pending?.game_mode||'standard')};
+$('reloadBtn').onclick=()=>{lastEndKey='';pending=null;$('claimForm').hidden=false;closeDialog($('qualifyDlg'));frame.src='./index.html?ranked='+Date.now()};
+document.querySelectorAll('[data-mode]').forEach(x=>x.addEventListener('click',()=>showBoard(x.dataset.mode)));
+if(new URL(location.href).searchParams.has('leaderboard')){showBoard('standard')}
+})();
+</script></body></html>
